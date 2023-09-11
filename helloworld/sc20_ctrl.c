@@ -4,37 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <pthread.h>
 
-#include <RilPublic.h>
-#include "c_printf.h"
+#include <RilPublic.h> // For Radio API
 
-const char *cmd[] = {
-		"ATI",
-		"AT+CPIN?",
-		"AT+COPS?",
-		"AT$QCSIMAPP=?",
-		"AT+QFSGVERSION?",
-		"AT+QGMR",
-		"AT+CSUB",
-		"AT+QMBNCFG=\"list\"",
-		"at+cimi",
-		"at+iccid",
-		"at+egmr=0,7",
-		"at+egmr=0,10",
-		"at+egmr=0,5",
-		"AT+CSQ",
-		"AT+CREG?",
-		"AT^SYSCONFIG?",
-		"AT+CGSN",
-		"AT+CCLK?",
-		"AT+CGDCONT?",
-		"AT+CGPADDR",
-		"AT+ICCID",
-		NULL,
-};
+#include "c_printf.h" // For Debug purpose
 
-int handle = 0;
+#include "sc20_ctrl.h"
 
 //========================================= SCREEN RELATED APIs ================================
 int screen_handle = 0;
@@ -65,7 +40,7 @@ int SC20TurnOnScreen(void)
 	return ret;
 }
 
-void SC20TurnOffScreen(void)
+int SC20TurnOffScreen(void)
 {
 	int ret = 0;
 
@@ -78,15 +53,79 @@ void SC20TurnOffScreen(void)
 	return ret;
 }
 
-int SetupInitATCmd(void)
+int SC20ScreenCtrlDeInit(void)
+{
+	int ret = 0;
+
+	ret = QLSCREEN_Exit(&screen_handle);
+	if (ret < 0)
+		c_printf("[r]%s%d\n", "QLSCREEN_Exit failure:", ret);
+	else
+		c_printf("[g]%s\n", "QLSCREEN_Exit success");
+
+	return ret;
+}
+
+//========================================= NETWORK RELATED APIs ================================
+int modem_handle = 0;
+
+// const char *startup_at_cmd[] = {
+// 		"ATI",
+// 		"AT+CPIN?",
+// 		"AT+COPS?",
+// 		"AT$QCSIMAPP=?",
+// 		"AT+QFSGVERSION?",
+// 		"AT+QGMR",
+// 		"AT+CSUB",
+// 		"AT+QMBNCFG=\"list\"",
+// 		"at+cimi",
+// 		"at+iccid",
+// 		"at+egmr=0,7",
+// 		"at+egmr=0,10",
+// 		"at+egmr=0,5",
+// 		"AT+CSQ",
+// 		"AT+CREG?",
+// 		"AT^SYSCONFIG?",
+// 		"AT+CGSN",
+// 		"AT+CCLK?",
+// 		"AT+CGDCONT?",
+// 		"AT+CGPADDR",
+// 		"AT+ICCID",
+// 		NULL,
+// };
+
+
+// int SC20ModemSendInitCommand(void)
+// {
+// 	int i;
+// 	int ret = 0;
+// 	char cmd_resp[1024] = {0};
+
+// 	for (i = 0; startup_at_cmd[i] != NULL; i++) {
+// 		memset(cmd_resp, 0, sizeof(cmd_resp));
+// 		ret = QLMISC_SendAT(startup_at_cmd[i], cmd_resp, sizeof(cmd_resp));
+// 		if (ret < 0)
+// 			c_printf("[r]%s%d\n", "QLMISC_SendAT failed with return:", ret);
+// 		else {
+// 			c_printf("AT command response[%d]:\n", ret);
+// 			c_printf("[g]%s\n", cmd_resp);
+// 		}
+// 	}
+
+// 	return ret;
+// }
+
+
+
+int SC20ModemSendATCommand(const char* user_at_cmd)
 {
 	int i;
 	int ret = 0;
 	char cmd_resp[1024] = {0};
 
-	for (i = 0; cmd[i] != NULL; i++) {
+	{
 		memset(cmd_resp, 0, sizeof(cmd_resp));
-		ret = QLMISC_SendAT(cmd[i], cmd_resp, sizeof(cmd_resp));
+		ret = QLMISC_SendAT(user_at_cmd, cmd_resp, sizeof(cmd_resp));
 		if (ret < 0)
 			c_printf("[r]%s%d\n", "QLMISC_SendAT failed with return:", ret);
 		else {
@@ -94,33 +133,82 @@ int SetupInitATCmd(void)
 			c_printf("[g]%s\n", cmd_resp);
 		}
 	}
-	
+
 	return ret;
 }
 
 /*
-* Radio technology:
-* 3 - UMTS
-* 14 - LTE
-* For more information refer to RIL_RadioTechnology in ril.h
+Response: "+CSQ: 19,0"
+Value	RSSI dBm	Condition
+10	-93	OK
+11	-91	OK
+12	-89	OK
+13	-87	OK
+14	-85	OK
+15	-83	Good
+16	-81	Good
+17	-79	Good
+18	-77	Good
+19	-75	Good
+20	-73	Excellent
+21	-71	Excellent
+22	-69	Excellent
+23	-67	Excellent
+24	-65	Excellent
+25	-63	Excellent
+26	-61	Excellent
+27	-59	Excellent
+28	-57	Excellent
+29	-55	Excellent
+30	-53	Excellent
 */
 
-/*
-* Profile Id:
-* 0 - RIL_DATA_PROFILE_DEFAULT
-* 1 - RIL_DATA_PROFILE_TETHERED
-* 2 - RIL_DATA_PROFILE_IMS
-* 3 - RIL_DATA_PROFILE_FOTA
-* 4 - RIL_DATA_PROFILE_CBS
-* 1000 - RIL_DATA_PROFILE_OEM_BASE
-* 0xFFFFFFFF - RIL_DATA_PROFILE_INVALID
-* For more information refer to RIL_DataProfile in ril.h
-*/
+int SC20ModemGetRSSI()
+{
+	int ret = 0;
+	RIL_SignalStrength_v10 *ss = NULL;
+	int xRetRssi = 0;
 
-int SetupDataCall(void)
+	ret = QLRIL_GetSignalStrength(&modem_handle, (void **)&ss);
+	if (ret < 0)
+		printf("%s%d\n", "QLRIL_GetSignalStrength with return:", ret);
+	else {
+		/**
+		 * UINT_MAX = 2147483647
+		 */
+		if (ss != NULL) {
+			printf("[signalStrength=%d, bitErrorRate=%d, "
+					"CDMA_SS.dbm=%d, CDMA_SSecio=%d, "
+					"EVDO_SS.dbm=%d, EVDO_SS.ecio=%d,"
+					"EVDO_SS.signalNoiseRatio=%d,\n"
+					"LTE_SS.signalStrength=%d, LTE_SS.rsrp=%d, LTE_SS.rsrq=%d, "
+					"LTE_SS.rssnr=%d, LTE_SS.cqi=%d, TDSCDMA_SS.rscp=%d]\n",
+					ss->GW_SignalStrength.signalStrength,
+					ss->GW_SignalStrength.bitErrorRate,
+					ss->CDMA_SignalStrength.dbm,
+					ss->CDMA_SignalStrength.ecio,
+					ss->EVDO_SignalStrength.dbm,
+					ss->EVDO_SignalStrength.ecio,
+					ss->EVDO_SignalStrength.signalNoiseRatio,
+					ss->LTE_SignalStrength.signalStrength,
+					ss->LTE_SignalStrength.rsrp,
+					ss->LTE_SignalStrength.rsrq,
+					ss->LTE_SignalStrength.rssnr,
+					ss->LTE_SignalStrength.cqi,
+					ss->TD_SCDMA_SignalStrength.rscp);
+			xRetRssi = ss->GW_SignalStrength.signalStrength;
+			free(ss);
+			ss = NULL;
+		}
+	}
+
+	return xRetRssi;
+}
+
+int SC20ModemSetupDataCall(int sim_slot)
 {
 	char buf[512] = {0};
-
+	int xRet = -1;
 	int on = 0;
 	int slotId = 0;
 	int fool = 0;
@@ -135,8 +223,6 @@ int SetupDataCall(void)
 
 	int radioTech = 14;
 	int profileId = 0;
-	// char apn[40] = {0};
-	// char protocol[10] = {0};
 	int ret = 0;
 
 	char *str = NULL;
@@ -144,7 +230,21 @@ int SetupDataCall(void)
 	char buffer[100] = {0};
 	RIL_Data_Call_Response_v11 *dataCall = NULL;
 
-	ret = QLRIL_SetupDataCall(&handle, radioTech, profileId, "", "", "", 0, "IP", (void **)&dataCall);
+	if ( SetSimCardSlotId(sim_slot) != 0)
+	{
+		printf("Swith sim slot failed\n");
+		return -1;
+	}
+
+	if (modem_handle == 0)
+	{
+		printf("Invalid modem handle\n");
+		return -1;
+	}
+
+	sleep(3);
+
+	ret = QLRIL_SetupDataCall(&modem_handle, radioTech, profileId, "", "", "", 0, "IP", (void **)&dataCall);
 
 	if (ret > 0 && dataCall != NULL) 
 	{
@@ -157,6 +257,7 @@ int SetupDataCall(void)
 			dataCall->type, dataCall->ifname, dataCall->addresses,
 			dataCall->dnses, dataCall->gateways, dataCall->pcscf, dataCall->mtu);
 	buf[sizeof(buf) - 1] = 0;//prevent stack overflows
+	xRet = dataCall->status;
 	c_printf("[g]%s\n", buf);
 
 	if (dataCall->active == 0) {
@@ -215,73 +316,72 @@ int SetupDataCall(void)
 	} else {
 	c_printf ("[r]%s%d\n", "QLRIL_SetupDataCall failed with return:", ret);
 	}
+
+	return xRet;
 }
 
-int GetSimCardSlotId(void)
-{
-	int ret;
-	int slotId = 0;
-	ret = QLRIL_GetSimCardSlotId(&handle, &slotId);
-	if (ret == 0) {
-	c_printf("[g]%s%d\n", "Current SIM card slot ID: ", slotId);
-	} else
-	c_printf("[r]%s%d\n", "QLRIL_GetSimCardSlotId failed with return:", ret);
-}
-
-void SetSimCardSlotId(int sim_id)
+int SC20ModemAPIInit(void)
 {
 	int ret = 0;
-
-	ret = QLRIL_SetSimCardSlotId(&handle, sim_id);
-	if (ret == 0)
-	c_printf("[g]%s\n", "QLRIL_SetSimCardSlotId success");
-	else
-	c_printf("[r]%s%d\n", "QLRIL_SetSimCardSlotId failed with return: ", ret);
-}
-
-
-
-int InitQLRILApi(void)
-{
-	int ret = 0;
-	char buf[512] = {0};
 	int i = 0;
 
-	// int on = 0;
-	// int slotId = 0;
-	// int fool = 0;
-	// int type = 0;
-	// int cmdIdx = 0;
-	// int start, end, i, num;
-
-	// char ch = 0;
-	// char areaCode[10] = {0};
-	// char addr[30] = {0};
-	// char msg[200] = {0};
-	
-
-	if (handle == 0) {
-		for (i = 0; i < 5; i++) {
-			ret = QLRIL_Init(&handle);
+	if (modem_handle == 0) 
+	{
+		for (i = 0; i < 5; i++) 
+		{
+			ret = QLRIL_Init(&modem_handle);
 			if (ret == 0) {
 				c_printf("[g]%s\n", "QLRIL_Init success");
 				break;
 			}
-
 			sleep(1);
 		}
 
-		if (handle == 0 || i >= 5) {
+		if (modem_handle == 0 || i >= 5) 
+		{
 			c_printf("[r]%s%d\n", "QLRIL_Init failed with return:", ret);
 		}
 	}
 
-	memset(buf, 0, sizeof(buf));
-	ret = QLRIL_GetVersion(buf, sizeof(buf));
-	if (ret != 0)
-		c_printf("[r]%s%d\n", "QLRIL_GetVersion failed with return:", ret);
-	else
-		c_printf("[g]%s%s\n", "QLRIL library current version:", buf);
-
 	return ret;
+}
+
+
+/* NOT YET READY */
+int GetSimCardSlotId()
+{
+	int ret;
+	int slot = 0;
+
+	ret = QLRIL_GetSimCardSlotId(&modem_handle, &slot);
+	if (ret == 0) {
+		c_printf("[g]%s%d\n", "Current SIM card slot ID: ", slot);
+	} else
+		c_printf("[r]%s%d\n", "QLRIL_GetSimCardSlotId failed with return:", ret);
+
+	return slot;
+}
+
+/* NOT YET READY */
+int  SetSimCardSlotId(int sim_id)
+{
+	int ret = 0;
+	int curr_slot = 0;
+
+	ret = QLRIL_SetSimCardSlotId(&modem_handle, sim_id);
+	if (ret == 0)
+	c_printf("[g]%s\n", "QLRIL_SetSimCardSlotId success");
+	else
+	c_printf("[r]%s%d\n", "QLRIL_SetSimCardSlotId failed with return: ", ret);
+	
+	curr_slot = GetSimCardSlotId();
+	if (curr_slot != sim_id)
+	{
+		printf("Switch sim slot failed\n");
+		return -1;
+	}
+
+	// SC20ModemSendATCommand("at$qcsimapp=1");
+
+	return 0;
 }
