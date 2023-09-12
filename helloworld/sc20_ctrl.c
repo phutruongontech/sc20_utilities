@@ -205,6 +205,74 @@ int SC20ModemGetRSSI()
 	return xRetRssi;
 }
 
+bool SC20ModemCheckActiveDataCall(void)
+{
+	int ret = 0;
+	bool isNetOK = false;
+	int i = 0;
+	char buf[512] = {0};
+
+	RIL_Data_Call_Response_v11 *dataCallList = NULL;
+
+	if ( modem_handle == 0)
+	{
+		printf("Invalid handle\n");
+		return false;
+	}
+	ret = QLRIL_GetDataCallList(&modem_handle, (void **)&dataCallList);
+
+	if (ret > 0) 
+	{
+		c_printf ("[g]%s[y]%d\n", "QLRIL_GetDataCallList success return items: ", ret);
+		if (dataCallList == NULL) 
+		{
+			c_printf("[r]%s\n", "QLRIL_GetDataCallList pointer is NULL");
+			return -1;
+		}
+
+		for (i = 0; i < ret; i++) 
+		{
+			c_printf ("[b]%s\n", "GetDataCallList response:");
+			snprintf (buf, sizeof(buf), "status:%d, retry:%d, call_id:%d, active:%s\n"
+					"type:%s, ifname:%s, addresses:%s, dnses:%s\n"
+					"gateways:%s, pcscf:%s, mtu:%d\n",
+					dataCallList[i].status, dataCallList[i].suggestedRetryTime,
+					dataCallList[i].cid, (dataCallList[i].active == 0)?"down":"up",
+					dataCallList[i].type, dataCallList[i].ifname, dataCallList[i].addresses,
+					dataCallList[i].dnses, dataCallList[i].gateways,
+					dataCallList[i].pcscf, dataCallList[i].mtu);
+			buf[sizeof(buf) - 1] = 0;//prevent stack overflows
+			c_printf("[g]%s\n", buf);
+
+			if ( dataCallList[i].status == 0 )
+			{
+				printf("Data call started success!!");
+				isNetOK = true;
+				break;
+			}
+
+			if (dataCallList[i].type)
+				free(dataCallList[i].type);
+			if (dataCallList[i].ifname)
+				free(dataCallList[i].ifname);
+			if (dataCallList[i].addresses)
+				free(dataCallList[i].addresses);
+			if (dataCallList[i].dnses)
+				free(dataCallList[i].dnses);
+			if (dataCallList[i].gateways)
+				free(dataCallList[i].gateways);
+			if (dataCallList[i].pcscf)
+				free(dataCallList[i].pcscf);
+		}
+	} 
+
+	return isNetOK;
+}
+
+#define DEFAULT_APN 		"m-wap"
+#define DEFAULT_APN_USR     "mms"
+#define DEFAULT_APN_PWD     "mms"
+
 int SC20ModemSetupDataCall(int sim_slot)
 {
 	char buf[512] = {0};
@@ -244,7 +312,7 @@ int SC20ModemSetupDataCall(int sim_slot)
 
 	sleep(3);
 
-	ret = QLRIL_SetupDataCall(&modem_handle, radioTech, profileId, "", "", "", 0, "IP", (void **)&dataCall);
+	ret = QLRIL_SetupDataCall(&modem_handle, radioTech, profileId, DEFAULT_APN, DEFAULT_APN_USR, DEFAULT_APN_PWD, 0, "IPV4V6", (void **)&dataCall);
 
 	if (ret > 0 && dataCall != NULL) 
 	{

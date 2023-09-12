@@ -1,6 +1,8 @@
 #ifndef SC20_CTRL_H_
 #define SC20_CTRL_H_
 
+#include <stdbool.h>
+
 // Screen Related APIs
 int SC20ScreenCtrlInit(void);
 int SC20TurnOnScreen(void);
@@ -25,6 +27,6 @@ int SC20ModemGetRSSI();
 // SIM Card API - not yet tested
 int GetSimCardSlotId(void);
 int SetSimCardSlotId(int simId);
-
+bool SC20ModemCheckActiveDataCall(void);
 
 #endif

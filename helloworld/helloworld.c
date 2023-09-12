@@ -46,12 +46,18 @@ void ModemLTE_Test(int sim_lot)
 
     SC20ModemAPIInit();
 
-    net_status = SC20ModemSetupDataCall(sim_lot);
-    if ( net_status == 0)
-    {   
-        printf("NETWORK CONNECTED!!\n");
+    if ( SC20ModemCheckActiveDataCall() == true)
+    {
+        printf("============== Network has been connected, skipping ... ==============\n");
+    }else 
+    {
+        SC20ModemSetupDataCall(sim_lot);
+        rssi = SC20ModemGetRSSI();
+        printf("Current RSSI: %d\n", rssi);    
+
+        if ( SC20ModemCheckActiveDataCall() == true)
+        {
+            printf("============== Activate Network sucessfully ==============\n");
+        }
     }
-    
-    rssi = SC20ModemGetRSSI();
-    printf("Current RSSI: %d\n", rssi);    
 }
