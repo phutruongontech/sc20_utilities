@@ -1,5 +1,5 @@
 TARGET=helloworld  
-LDFLAGS= -lpthread  -lql_mcm_api -lql_ril -lql_misc
+LDFLAGS= -lpthread  -lql_mcm_api -lql_ril -lql_misc -lql_gpio
  
 CUR_SOURCE=${wildcard *.c}
 CUR_OBJS=${patsubst %.c, %.o, $(CUR_SOURCE)}
