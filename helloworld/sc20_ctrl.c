@@ -16,6 +16,8 @@
 //========================================= SCREEN RELATED APIs ================================
 int screen_handle = 0;
 int SC20TurnOnScreen(void);
+int SC20UserGpioGet(uint32_t gpio_number);
+int SC20UserGpioSet(uint32_t gpio_number, uint16_t inout_val);
 
 int SC20ScreenCtrlInit(void)
 {

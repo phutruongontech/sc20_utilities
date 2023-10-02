@@ -2,6 +2,7 @@
 #define SC20_CTRL_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 typedef enum 
 {
