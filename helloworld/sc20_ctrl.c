@@ -11,8 +11,11 @@
 
 #include "sc20_ctrl.h"
 
+#include <ql_gpio/ql_gpio.h> // For GPIO
+
 //========================================= SCREEN RELATED APIs ================================
 int screen_handle = 0;
+int SC20TurnOnScreen(void);
 
 int SC20ScreenCtrlInit(void)
 {
@@ -22,7 +25,10 @@ int SC20ScreenCtrlInit(void)
 	if (ret < 0)
 		c_printf("[r]%s%d\n", "QLSCREEN_Init failure:", ret);
 	else
+	{
 		c_printf("[g]%s\n", "QLSCREEN_Init success");
+		SC20TurnOnScreen();
+	}
 
 	return ret;
 }
@@ -450,6 +456,47 @@ int  SetSimCardSlotId(int sim_id)
 	}
 
 	// SC20ModemSendATCommand("at$qcsimapp=1");
+
+	return 0;
+}
+
+
+//========================================= GPIO RELATED APIs ================================
+int SC20UserGpioInit()
+{
+	#define GPIO_OUTPUT_DEFAULT_CONFIG      (0x203)
+
+	QL_Gpio_Set_Config(SC20_GPIO_LED_ERR, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_LED_SD, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_LED_LTE_4G, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_LED_DATA, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_PWR_USB_HUB, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_PWR_USB_OTG, GPIO_OUTPUT_DEFAULT_CONFIG);
+	QL_Gpio_Set_Config(SC20_GPIO_PWR_USB_BUS, GPIO_OUTPUT_DEFAULT_CONFIG);
+
+	return 0;
+}
+
+
+int SC20UserGpioGet(uint32_t gpio_number)
+{
+	uint32_t inout_val = 0;
+
+	if (!Gpio_Valid(gpio_number)) {
+		fprintf(stderr, "%s: invalid gpio number: %d\n", argv[0], gpio_number);
+		return -1;
+	}
+	QL_Gpio_Get_Level(gpio_number, &inout_val);
+}
+
+int SC20UserGpioSet(uint32_t gpio_number, uint16_t inout_val)
+{
+	if (!Gpio_Valid(gpio_number)) {
+		fprintf(stderr, "%s: invalid gpio number: %d\n", argv[0], gpio_number);
+		return -1;
+	}
+
+	QL_Gpio_Set_Level(gpio_number, inout_val);
 
 	return 0;
 }

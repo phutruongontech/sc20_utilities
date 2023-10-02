@@ -6,6 +6,7 @@ mount -o remount,rw /
 */
 void ScreenTest(void);
 void ModemLTE_Test(int);
+void UserGPIOTest(void);
 
 int main(int argc, char **argv)
 {
@@ -21,7 +22,8 @@ int main(int argc, char **argv)
 
     ModemLTE_Test(sim_lot);
     ScreenTest();
-    
+    UserGPIOTest();
+
     return 0;
 }
 
@@ -60,4 +62,13 @@ void ModemLTE_Test(int sim_lot)
             printf("============== Activate Network sucessfully ==============\n");
         }
     }
+}
+
+void UserGPIOTest(void)
+{
+    SC20UserGpioInit();
+    
+    SC20UserGpioSet(SC20_GPIO_LED_ERR, 1);
+    sleep(5);
+    SC20UserGpioSet(SC20_GPIO_LED_ERR, 0);
 }
