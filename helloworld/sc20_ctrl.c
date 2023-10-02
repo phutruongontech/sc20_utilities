@@ -485,7 +485,7 @@ int SC20UserGpioGet(uint32_t gpio_number)
 	uint32_t inout_val = 0;
 
 	if (!Gpio_Valid(gpio_number)) {
-		fprintf(stderr, "%s: invalid gpio number: %d\n", argv[0], gpio_number);
+		fprintf(stderr, "Invalid gpio number: %d\n", gpio_number);
 		return -1;
 	}
 	QL_Gpio_Get_Level(gpio_number, &inout_val);
@@ -494,7 +494,7 @@ int SC20UserGpioGet(uint32_t gpio_number)
 int SC20UserGpioSet(uint32_t gpio_number, uint16_t inout_val)
 {
 	if (!Gpio_Valid(gpio_number)) {
-		fprintf(stderr, "%s: invalid gpio number: %d\n", argv[0], gpio_number);
+		fprintf(stderr, "Invalid gpio number: %d\n", gpio_number);
 		return -1;
 	}
 
