@@ -1,0 +1,15 @@
+1. Xóa routing default
+iproute del default 
+
+2. Chuyen mang cho eth0
+iproute add default via 192.168.1.1 dev eth0
+
+3. Chuyen mang cho eth0
+iproute add default via 192.168.0.1 dev eth1
+
+4. Chuyen mang cho eth0
+iproute add default dev rmnet_data0
+
+Yeu cau:
+- User nhập Default Gateway (eg. 192.168.0.1) trong file config
+- Cần lưu ý card mang 4G rmnet_data0 có thể bị thay đổi
